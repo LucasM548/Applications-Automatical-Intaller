@@ -55,51 +55,43 @@ def installer_applications():
     for app, installed in variables_applications.items():
         if installed.get():
             url = applications[app]
-            if url.endswith('.msi'):
-                telecharger_et_installer_application_msi(app, url)
+            #======== LES APPLICATIONS IMPOSSIBLE A INSTALLER =========
+            if "(site)" in app:
+                ouvrir_site_web(url)
+            #===== END OF LES APPLICATIONS IMPOSSIBLE A INSTALLER ======
             else:
-                #======== LES APPLICATIONS IMPOSSIBLE A INSTALLER =========
-                if app in ["Davinci Resolve (site)", "HWINFO (site)", "Voicemod (site)", "NVIDIA GeForce NOW (site)", "NVIDIA App (site)"]:
-                    ouvrir_site_web(url)
-                #===== END OF LES APPLICATIONS IMPOSSIBLE A INSTALLER ======
-                else:
-                    telecharger_et_installer_application(app, url)
+                telecharger_et_installer_application(app, url)
     root.destroy() # Fermeture après l'installation des apps
 
-#======== .EXE =========
 def telecharger_et_installer_application(nom_application, url):
     try:
-        # Téléchargement du fichier d'installation
-        chemin_fichier = chemin_telechargements / (nom_application + ".exe")
-        with open(chemin_fichier, "wb") as f:
-            response = requests.get(url, stream=True)
-            total_size = int(response.headers.get('content-length', 0))
-            with tqdm(total=total_size, unit='B', unit_scale=True, desc=f'Téléchargement de {nom_application}', unit_divisor=1024) as pbar:
-                for data in response.iter_content(chunk_size=1024):
-                    f.write(data)
-                    pbar.update(len(data))
+        #======== .MSI =========
+        if url.endswith('.msi'):
+            chemin_fichier = chemin_telechargements / (nom_application + ".msi")
+            with open(chemin_fichier, "wb") as f:
+                response = requests.get(url, stream=True)
+                total_size = int(response.headers.get('content-length', 0))
+                with tqdm(total=total_size, unit='B', unit_scale=True, desc=f'Téléchargement de {nom_application}', unit_divisor=1024) as pbar:
+                    for data in response.iter_content(chunk_size=1024):
+                        f.write(data)
+                        pbar.update(len(data))
+
+            # Exécution de msiexec pour installer le fichier MSI
+            subprocess.call(["msiexec", "/i", str(chemin_fichier)])
+        
+        #======== .EXE =========
+        else:
+            chemin_fichier = chemin_telechargements / (nom_application + ".exe")
+            with open(chemin_fichier, "wb") as f:
+                response = requests.get(url, stream=True)
+                total_size = int(response.headers.get('content-length', 0))
+                with tqdm(total=total_size, unit='B', unit_scale=True, desc=f'Téléchargement de {nom_application}', unit_divisor=1024) as pbar:
+                    for data in response.iter_content(chunk_size=1024):
+                        f.write(data)
+                        pbar.update(len(data))
 
         # Exécution du fichier d'installation avec les droits administrateur
         ctypes.windll.shell32.ShellExecuteW(None, "runas", str(chemin_fichier), None, None, 1)
-
-    except Exception as e:
-        messagebox.showerror("Erreur", f"Impossible d'installer {nom_application} : {str(e)}")
-
-#======== .MSI =========
-def telecharger_et_installer_application_msi(nom_application, url):
-    try:
-        # Téléchargement du fichier d'installation
-        chemin_fichier = chemin_telechargements / (nom_application + ".msi")
-        with open(chemin_fichier, "wb") as f:
-            response = requests.get(url, stream=True)
-            total_size = int(response.headers.get('content-length', 0))
-            with tqdm(total=total_size, unit='B', unit_scale=True, desc=f'Téléchargement de {nom_application}', unit_divisor=1024) as pbar:
-                for data in response.iter_content(chunk_size=1024):
-                    f.write(data)
-                    pbar.update(len(data))
-
-        # Exécution de msiexec pour installer le fichier MSI
-        subprocess.call(["msiexec", "/i", str(chemin_fichier)])
 
     except Exception as e:
         messagebox.showerror("Erreur", f"Impossible d'installer {nom_application} : {str(e)}")
